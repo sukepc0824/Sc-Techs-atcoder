@@ -2,52 +2,56 @@ import express from 'express';
 import fetch from 'node-fetch';
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 const users = ['pcsuke', 'azumak', 'makoron_6', 'TamaiKoyomi', 'launchpencil', 'satouhao', 'soom', 'niko0906', 'AORNG', 'kouki0404', 'tomatyu', 'tori101500', 'kazurei', 'rukaa', 'mikiya1203', 'taiseidayoooo', 'tkiyom'];
 
-const PORT = process.env.PORT || 3000;
-
 app.get('/ratings', async (req, res) => {
-  const results = [];
-
-  for (const user of users) {
-    const data = await getUserData(user);
-    if (data !== null) {
-      results.push(data);
-    }
-  }
-  res.json(results);
-});
-
-async function getUserData(user) {
   try {
-    const historyRes = await fetch(`https://atcoder.jp/users/${user}/history/json`);
-    if (!historyRes.ok) throw new Error(`History fetch failed for ${user}`);
-    const history = await historyRes.json();
+    const results = [];
 
-    // 履歴が空ならスキップ
-    if (!Array.isArray(history) || history.length === 0) return null;
+    for (const user of users) {
+      const historyUrl = `https://atcoder.jp/users/${user}/history/json`;
+      const acUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/ac_rank?user=${user}`;
 
-    const acRes = await fetch(`https://kenkoooo.com/atcoder/atcoder-api/v3/user/ac_rank?user=${user}`);
-    if (!acRes.ok) throw new Error(`AC fetch failed for ${user}`);
-    const acData = await acRes.json();
-    const acCount = acData.count;
+      try {
+        const historyRes = await fetch(historyUrl);
+        const acRes = await fetch(acUrl);
 
-    const latest = history.at(-1);
-    const newRating = latest?.NewRating ?? null;
+        const history = historyRes.ok ? await historyRes.json() : [];
+        const acData = acRes.ok ? await acRes.json() : [];
 
-    return {
-      user,
-      latestRating: newRating,
-      acCount,
-      history
-    };
+        const latest = history.at(-1);
 
+        results.push({
+          user,
+          latestRating: latest?.NewRating ?? null,
+          acCount: acData.count,
+          history
+        });
+      } catch (err) {
+        results.push({
+          user,
+          latestRating: null,
+          acCount: null,
+          history: [],
+          error: true
+        });
+      }
+    }
+
+    const sorted = results.sort((a, b) => {
+      if (a.latestRating === null) return 1;
+      if (b.latestRating === null) return -1;
+      return b.latestRating - a.latestRating;
+    });
+
+    res.set('Access-Control-Allow-Origin', '*');
+    res.json(sorted);
   } catch (err) {
-    console.error(`Error for user ${user}:`, err);
-    return null;
+    res.status(500).json({ error: "Internal Server Error" });
   }
-}
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
