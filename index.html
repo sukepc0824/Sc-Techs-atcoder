@@ -5,7 +5,27 @@
     <meta charset="UTF-8" />
     <title>AtCoder Rating Charts</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-colorschemes"></script>
     <style>
+        * {
+            font-family: "Inter", sans-serif;
+            font-feature-settings: "tnum";
+        }
+
+        a {
+            color: #000;
+            text-decoration: none;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
         table {
             border-collapse: collapse;
             width: 90%;
@@ -16,7 +36,11 @@
         td {
             border: 1px solid #aaa;
             padding: 8px;
-            text-align: center;
+            text-align: left;
+        }
+
+        td.rate {
+            font-weight: 600;
         }
 
         th {
@@ -28,34 +52,39 @@
         }
 
         .negative {
-            color: red;
+            color: rgb(206, 0, 0);
         }
 
         #charts {
-            width: 700px;
-            height: 1400px;
+            max-width: 500px;
+            width: 100%;
+            height: 2140px;
+        }
+
+        input[type="checkbox"] {
+            transform: scale(1.5);
         }
 
         canvas {
             margin-bottom: 40px;
-            height: 400px;
         }
     </style>
 </head>
 
 <body>
+    <h1>AtCoder at 我が社</h1>
     <table id="userTable">
         <thead>
             <tr>
+                <th>表示</th>
                 <th>ユーザー名</th>
                 <th>レート</th>
-                <th>レート変化</th>
+                <th>変化</th>
                 <th>総AC数</th>
             </tr>
         </thead>
         <tbody></tbody>
     </table>
-    <h1>AtCoder Rating History</h1>
     <div id="charts"></div>
 
     <script>
@@ -64,69 +93,25 @@
             const data = await res.json();
             return data;
         }
-
-        function createChart(userData) {
-            const ctx = document.createElement('canvas');
-            document.getElementById('charts').appendChild(ctx);
-
-            const labels = userData.history.map(item => item.EndTime.split('T')[0]);
-            const ratings = userData.history.map(item => item.NewRating);
-
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [{
-                        label: `${userData.user} (${userData.acCount} ACs)`,
-                        data: ratings,
-                        borderColor: getRandomColor(),
-                        fill: false,
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: `${userData.user} のレート推移`
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                            title: {
-                                display: true,
-                                text: 'Rating'
-                            }
-                        },
-                        x: {
-                            ticks: {
-                                maxTicksLimit: 10
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
+        
         function getRandomColor() {
             const r = () => Math.floor(Math.random() * 256 * 0.84);
             return `rgb(${r()},${r()},${r()})`;
         }
 
         function createCombinedChart(allData) {
+            document.querySelector("#charts").innerHTML = ''
             const ctx = document.createElement('canvas');
             document.getElementById('charts').appendChild(ctx);
+            ctx.height = 220
 
             const datasets = allData.map(userData => {
                 const labels = userData.history.map(item => item.EndTime.split('T')[0]);
                 const ratings = userData.history.map(item => item.NewRating);
 
                 return {
-                    label: `${userData.user} (${userData.acCount} ACs)`,
+                    label: `${userData.user}`,
                     data: ratings,
-                    borderColor: getRandomColor(),
                     fill: false,
                     tension: 0.1
                 };
@@ -141,13 +126,12 @@
                     datasets
                 },
                 options: {
-                    responsive: true,
                     plugins: {
-                        title: {
-                            display: true,
-                            text: 'Combined AtCoder Rating History'
+                        colorschemes: {
+                            scheme: 'brewer.Paired12'
                         }
                     },
+                    responsive: true,
                     scales: {
                         y: {
                             beginAtZero: false,
@@ -166,22 +150,47 @@
             });
         }
 
+        function getRatingColor(rating) {
+            if (rating >= 1600) { return 'blue' }
+            else if (rating >= 1200) { return 'cyan' }
+            else if (rating >= 800) { return 'green' }
+            else if (rating >= 400) { return 'brown' }
+            else if (rating > 0) { return 'gray' }
+        }
+
+        function update() {
+            let data = []
+            let checkbox = []
+            document.querySelectorAll("input:checked").forEach(element => {
+                checkbox.push(element.id)
+            })
+            allData.forEach(element => {
+                for (let i = 0; i < checkbox.length; i++) {
+                    if (element.user == checkbox[i]) {
+                        data.push(element)
+                    }
+                }
+            })
+            createCombinedChart(data);
+        }
+
+        let allData;
         (async () => {
-            const allData = await fetchRatings();
-            console.log(allData)
-            createCombinedChart(allData);
-            const users = await fetchRatings();
+            allData = await fetchRatings();
+
+
             const tbody = document.querySelector('#userTable tbody');
 
-            users.forEach(user => {
+            allData.forEach(user => {
                 const latest = user.history.at(-1);
                 const oldRating = latest?.OldRating ?? null;
                 const newRating = latest?.NewRating ?? null;
                 const ratingChange = formatChange(oldRating, newRating);
                 const row = `
           <tr>
-            <td>${user.user}</td>
-            <td>${newRating ?? "-"}</td>
+            <td><input type="checkbox" id="${user.user}" onchange="update()"></td>
+            <td><a href="https://atcoder.co.jp/users/${user.user}">${user.user}</a></td>
+            <td style="color:${getRatingColor(newRating)};" class="rate">${newRating ?? "-"}</td>
             <td>${ratingChange}</td>
             <td>${user.acCount ?? "-"}</td>
           </tr>
