@@ -207,8 +207,8 @@
         function formatChange(oldRating, newRating) {
             if (oldRating == null || newRating == null) return "-";
             const diff = newRating - oldRating;
-            const sign = diff >= 0 ? "+" : "";
-            const cls = diff >= 0 ? "positive" : "negative";
+            const sign = diff > 0 ? "+" : "";
+            const cls = diff > 0 ? "positive" : "negative";
             return `<span class="${cls}">${sign}${diff}</span>`;
         }
 
