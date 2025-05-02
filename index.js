@@ -1,7 +1,11 @@
-const users = ['pcsuke', 'azumak', 'makoron_6', 'TamaiKoyomi', 'launchpencil', 'satouhao', 'soom', 'niko0906', 'AORNG', 'kouki0404', 'tomatyu', 'tori101500', 'kazurei', 'rukaa', 'mikiya1203', 'taiseidayoooo', 'tkiyom'];
+import express from 'express';
+import fetch from 'node-fetch';
+
 const express = require('express');
 const fetch = require('node-fetch');
 const app = express();
+
+const users = ['pcsuke', 'azumak', 'makoron_6', 'TamaiKoyomi', 'launchpencil', 'satouhao', 'soom', 'niko0906', 'AORNG', 'kouki0404', 'tomatyu', 'tori101500', 'kazurei', 'rukaa', 'mikiya1203', 'taiseidayoooo', 'tkiyom'];
 
 const PORT = process.env.PORT || 3000;
 
