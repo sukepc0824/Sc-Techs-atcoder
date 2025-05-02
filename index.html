@@ -1,18 +1,204 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <script>
-        async function fetch_data(){
-            const responce = await fetch("https://sc-techs-atcoder-api-production.up.railway.app/ratings")
-            const json = await responce.json()
-            console.log(json)
+    <meta charset="UTF-8" />
+    <title>AtCoder Rating Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 90%;
+            margin: 20px auto;
         }
-        fetch_data()
+
+        th,
+        td {
+            border: 1px solid #aaa;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #eee;
+        }
+
+        .positive {
+            color: green;
+        }
+
+        .negative {
+            color: red;
+        }
+
+        #charts {
+            width: 700px;
+            height: 1400px;
+        }
+
+        canvas {
+            margin-bottom: 40px;
+            height: 400px;
+        }
+    </style>
+</head>
+
+<body>
+    <table id="userTable">
+        <thead>
+            <tr>
+                <th>ユーザー名</th>
+                <th>レート</th>
+                <th>レート変化</th>
+                <th>総AC数</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <h1>AtCoder Rating History</h1>
+    <div id="charts"></div>
+
+    <script>
+        async function fetchRatings() {
+            const res = await fetch('https://sc-techs-atcoder-api-production.up.railway.app/ratings');
+            const data = await res.json();
+            return data;
+        }
+
+        function createChart(userData) {
+            const ctx = document.createElement('canvas');
+            document.getElementById('charts').appendChild(ctx);
+
+            const labels = userData.history.map(item => item.EndTime.split('T')[0]);
+            const ratings = userData.history.map(item => item.NewRating);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: `${userData.user} (${userData.acCount} ACs)`,
+                        data: ratings,
+                        borderColor: getRandomColor(),
+                        fill: false,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `${userData.user} のレート推移`
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Rating'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxTicksLimit: 10
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getRandomColor() {
+            const r = () => Math.floor(Math.random() * 256 * 0.84);
+            return `rgb(${r()},${r()},${r()})`;
+        }
+
+        function createCombinedChart(allData) {
+            const ctx = document.createElement('canvas');
+            document.getElementById('charts').appendChild(ctx);
+
+            const datasets = allData.map(userData => {
+                const labels = userData.history.map(item => item.EndTime.split('T')[0]);
+                const ratings = userData.history.map(item => item.NewRating);
+
+                return {
+                    label: `${userData.user} (${userData.acCount} ACs)`,
+                    data: ratings,
+                    borderColor: getRandomColor(),
+                    fill: false,
+                    tension: 0.1
+                };
+            });
+
+            const labels = allData[0]?.history.map(item => item.EndTime.split('T')[0]) || [];
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Combined AtCoder Rating History'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Rating'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxTicksLimit: 10
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        (async () => {
+            const allData = await fetchRatings();
+            console.log(allData)
+            createCombinedChart(allData);
+            const users = await fetchRatings();
+            const tbody = document.querySelector('#userTable tbody');
+
+            users.forEach(user => {
+                const latest = user.history.at(-1);
+                const oldRating = latest?.OldRating ?? null;
+                const newRating = latest?.NewRating ?? null;
+                const ratingChange = formatChange(oldRating, newRating);
+                const row = `
+          <tr>
+            <td>${user.user}</td>
+            <td>${newRating ?? "-"}</td>
+            <td>${ratingChange}</td>
+            <td>${user.acCount ?? "-"}</td>
+          </tr>
+        `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        })();
+
+        function formatChange(oldRating, newRating) {
+            if (oldRating == null || newRating == null) return "-";
+            const diff = newRating - oldRating;
+            const sign = diff >= 0 ? "+" : "";
+            const cls = diff >= 0 ? "positive" : "negative";
+            return `<span class="${cls}">${sign}${diff}</span>`;
+        }
+
     </script>
 </body>
+
 </html>

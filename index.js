@@ -10,7 +10,7 @@ app.get('/ratings', async (req, res) => {
   try {
     const results = await Promise.all(users.map(async (user) => {
       const historyUrl = `https://atcoder.jp/users/${user}/history/json`;
-      const acUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/ac?user=${user}`;
+      const acUrl = `https://kenkoooo.com/atcoder/atcoder-api/v3/user/ac_rank?user=${user}`;
 
       try {
         // 並列取得
